@@ -2,70 +2,150 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Playground with Monaco Editor</title>
+</head>
+
+<body>
     <style>
-        body { display: flex; margin: 0; }
-        .wrapper { width: 50%; height: 100vh; }
-        .container1, .container2, .container3 { height: 200px}
+        .body {
+            display: flex;
+            margin: 0
+        }
+
+        .wrapper {
+            display: block;
+            width: 50%;
+            resize: both;
+        }
+
+        .container1,
+        .container2,
+        .container3 {
+            height: 200px
+        }
+
         .container1::before {
-            content: 'html';
+            content: 'html'
         }
+
         .container2::before {
-            content: 'js';
+            content: 'js'
         }
+
         .container3::before {
-            content: 'css';
+            content: 'css'
         }
-        .container2, .container3 {
+
+        .container2,
+        .container3 {
             margin: 1.5rem 0;
         }
-        .preview { width: 50%; height: calc(630px + 3rem); }
+
+        .preview {
+            width: 50%;
+            height: 670px
+        }
+
+        iframe {
+            border: 1px solid skyblue;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            background-color: aquamarine;
+            border-radius: 0.5rem;
+            box-shadow: 2px 2px;
+        }
+        button:active {
+            box-shadow: 0 0;
+        }
     </style>
-</head>
-<body>
-    <div class="wrapper">
-        <div class="container1"></div>
-        <div class="container2"></div>
-        <div class="container3"></div>
+
+    <div class="body">
+        <div class="wrapper">
+            <div class="container1"></div>
+            <div class="container2"></div>
+            <div class="container3"></div>
+        </div><iframe class="preview"></iframe>
     </div>
-    <iframe class="preview"></iframe>
+    <button id="cpBtn">Copy Shared Link</button>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs/loader.min.js"></script>
-    <script type="text/javascript">
+    <script>
+        const currentUrl = window.location.href;
+        const splitIndex = window.location.href.indexOf('?');
+        var url = window.location.href.substring(0, splitIndex == -1 ? window.location.href.length : splitIndex);
+        const _url = new URL(currentUrl);
+        const params = _url.searchParams;
+        let jsValue = '', cssValue = '', htmlValue = '';
+        params.forEach((value, name) => {
+            if (name === 'js') jsValue = base64Decode(value);
+            if (name === 'css') cssValue = base64Decode(value);
+            if (name === 'html') htmlValue = base64Decode(value);
+        });
+        function base64Encode(str) {
+            try {
+                return encodeURIComponent(btoa(unescape(encodeURIComponent(str))));
+            } catch (e) {
+                return str;
+            }
+        }
+        function base64Decode(base64Str) {
+            try {
+                return decodeURIComponent(escape(atob(base64Str)));
+            } catch (e) {
+                return base64Str;
+            }
+        }
         var iframe = document.querySelector('.preview');
-        var editor1, editor2, editor3;
         require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs' } });
         require(['vs/editor/editor.main'], function () {
-            editor1 = monaco.editor.create(document.querySelector('.container1'), {
-                value: '<h1>hi</h1>',
-                language: 'html',
-                theme: 'vs-dark'
-            });
-            editor2 = monaco.editor.create(document.querySelector('.container2'), {
-                value: 'console.log("hi")',
-                language: 'javascript',
-                theme: 'vs-dark'
-            });
-            editor3 = monaco.editor.create(document.querySelector('.container3'), {
-                value: 'h1 {font-size: 2rem}',
-                language: 'css',
-                theme: 'vs-dark'
-            });
-
+            var editor1 = monaco.editor.create(document.querySelector('.container1'), { language: 'html', theme: 'vs-dark' });
+            var editor2 = monaco.editor.create(document.querySelector('.container2'), { language: 'javascript', theme: 'vs-dark' });
+            var editor3 = monaco.editor.create(document.querySelector('.container3'), { language: 'css', theme: 'vs-dark' });
             var onchange = () => {
-                var html = editor1.getValue();
-                var js = editor2.getValue();
-                var css = editor3.getValue();
-                iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent("<html><style>"+css+"<\/style>"+ html + "<script>" + js + "<\/script><\/html>");
+                var html = editor1.getValue(); var js = editor2.getValue(); var css = editor3.getValue();
+                iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent("<html><style>" + css + "<\/style>" + html + "<script>" + js + "<\/script><\/html>");
             };
-            editor1.onDidChangeModelContent = onchange;
-            editor2.onDidChangeModelContent = onchange;
-            editor3.onDidChangeModelContent = onchange;
+            editor1.setValue(htmlValue);
+            editor2.setValue(jsValue);
+            editor3.setValue(cssValue);
+            enhance(editor1);
+            enhance(editor2);
+            enhance(editor3);
+            function enhance(editor) {
+                editor.onDidChangeModelContent = onchange;
+                editor.onKeyUp(onchange);
+                editor.setValue = new Proxy(editor.setValue, {
+                    apply(target, thisArg, args) {
+                        target.apply(thisArg, args);
+                        onchange();
+                    }
+                });
+            }
+            onchange();
+            window.editor1 = editor1;
+            window.editor2 = editor2;
+            window.editor3 = editor3;
             window.addEventListener('resize', () => {
                 editor1.layout();
                 editor2.layout();
                 editor3.layout();
             });
-        });
+        })
+        const cpBtn = document.getElementById('cpBtn');
+        cpBtn.onclick = () => {
+            var htmlB64 = base64Encode(editor1.getValue());
+            var jsB64 = base64Encode(editor2.getValue());
+            var cssB64 = base64Encode(editor3.getValue());
+            var src = `${url}?js=${jsB64}&css=${cssB64}&html=${htmlB64}`;
+            navigator.clipboard.writeText(src).then(function () {
+                alert('Copyed ~');
+            }, function (err) {
+                console.error(err);
+            });
+        }
     </script>
 </body>
+
 </html>
