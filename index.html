@@ -70,6 +70,7 @@
         </div><iframe class="preview"></iframe>
     </div>
     <button id="cpBtn">Copy Shared Link</button>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.11/pako.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs/loader.min.js"></script>
     <script>
         const currentUrl = window.location.href;
@@ -79,22 +80,22 @@
         const params = _url.searchParams;
         let jsValue = '', cssValue = '', htmlValue = '';
         params.forEach((value, name) => {
-            if (name === 'js') jsValue = base64Decode(value);
-            if (name === 'css') cssValue = base64Decode(value);
-            if (name === 'html') htmlValue = base64Decode(value);
+            if (name === 'js') jsValue = decode(value);
+            if (name === 'css') cssValue = decode(value);
+            if (name === 'html') htmlValue = decode(value);
         });
-        function base64Encode(str) {
+        function encode(str) {
             try {
-                return encodeURIComponent(btoa(unescape(encodeURIComponent(str))));
+                return encodeURIComponent(btoa(pako.deflate(str, { to: 'string' })));
             } catch (e) {
                 return str;
             }
         }
-        function base64Decode(base64Str) {
+        function decode(str) {
             try {
-                return decodeURIComponent(escape(atob(base64Str)));
+                return pako.inflate((atob(decodeURIComponent(str))), { to: 'string' });
             } catch (e) {
-                return base64Str;
+                return str;
             }
         }
         var iframe = document.querySelector('.preview');
@@ -135,9 +136,9 @@
         })
         const cpBtn = document.getElementById('cpBtn');
         cpBtn.onclick = () => {
-            var htmlB64 = base64Encode(editor1.getValue());
-            var jsB64 = base64Encode(editor2.getValue());
-            var cssB64 = base64Encode(editor3.getValue());
+            var htmlB64 = encode(editor1.getValue());
+            var jsB64 = encode(editor2.getValue());
+            var cssB64 = encode(editor3.getValue());
             var src = `${url}?js=${jsB64}&css=${cssB64}&html=${htmlB64}`;
             navigator.clipboard.writeText(src).then(function () {
                 alert('Copyed ~');
