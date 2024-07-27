@@ -65,11 +65,12 @@
     <div class="body">
         <div class="wrapper">
             <div class="container1"></div>
-            <div class="container2"></div>
             <div class="container3"></div>
+            <div class="container2"></div>
         </div><iframe class="preview"></iframe>
     </div>
-    <button id="cpBtn">Copy Shared Link</button>
+    <button id="cpBtn1">Copy Shared Link</button>
+    <button id="cpBtn2">Copy Embed Link</button>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.11/pako.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs/loader.min.js"></script>
     <script>
@@ -134,13 +135,28 @@
                 editor3.layout();
             });
         })
-        const cpBtn = document.getElementById('cpBtn');
-        cpBtn.onclick = () => {
+        const cpBtn1 = document.getElementById('cpBtn1');
+        const cpBtn2 = document.getElementById('cpBtn2');
+        cpBtn1.onclick = () => {
             var htmlB64 = encode(editor1.getValue());
             var jsB64 = encode(editor2.getValue());
             var cssB64 = encode(editor3.getValue());
             var src = `${url}?js=${jsB64}&css=${cssB64}&html=${htmlB64}`;
             navigator.clipboard.writeText(src).then(function () {
+                alert('Copyed ~');
+            }, function (err) {
+                console.error(err);
+            });
+        }
+        cpBtn2.onclick = () => {
+            var htmlB64 = encode(editor1.getValue());
+            var jsB64 = encode(editor2.getValue());
+            var cssB64 = encode(editor3.getValue());
+            var src = `${url}?js=${jsB64}&css=${cssB64}&html=${htmlB64}`;
+            var iframeStr = `<iframe src="${src}" height="730"
+    allow="clipboard-write"
+    sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts allow-clipboard-write"></iframe>`;
+            navigator.clipboard.writeText(iframeStr).then(function () {
                 alert('Copyed ~');
             }, function (err) {
                 console.error(err);
