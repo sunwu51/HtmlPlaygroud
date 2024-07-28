@@ -155,7 +155,7 @@
             var src = `${url}?js=${jsB64}&css=${cssB64}&html=${htmlB64}`;
             var iframeStr = `<iframe src="${src}" height="730"
     allow="clipboard-write"
-    sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts allow-clipboard-write"></iframe>`;
+    sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"></iframe>`;
             navigator.clipboard.writeText(iframeStr).then(function () {
                 alert('Copyed ~');
             }, function (err) {
