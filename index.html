@@ -8,21 +8,49 @@
 
 <body>
     <style>
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+        }
+
         .body {
             display: flex;
+            align-items: stretch;
+            flex: 1 1 auto;
+            min-height: 0;
             margin: 0
         }
 
         .wrapper {
-            display: block;
-            width: 50%;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            flex: 0 0 50%;
+            height: 100%;
+            min-width: 260px;
             resize: both;
+            overflow: auto;
+            transition: flex-basis 0.2s ease, min-width 0.2s ease;
+        }
+
+        .body.input-collapsed .wrapper {
+            flex-basis: 0;
+            min-width: 0;
+            overflow: hidden;
+            resize: none;
         }
 
         .container1,
         .container2,
         .container3 {
-            height: 200px
+            flex: 0 0 30%;
+            min-height: 200px
         }
 
         .container1::before {
@@ -37,14 +65,9 @@
             content: 'css'
         }
 
-        .container2,
-        .container3 {
-            margin: 1.5rem 0;
-        }
-
         .preview {
-            width: 50%;
-            height: 670px
+            flex: 1 1 auto;
+            height: auto;
         }
 
         iframe {
@@ -53,12 +76,26 @@
 
         button {
             padding: 0.5rem 1rem;
-            background-color: aquamarine;
+            background-color: #fffaf0;
             border-radius: 0.5rem;
             box-shadow: 2px 2px;
         }
         button:active {
             box-shadow: 0 0;
+        }
+
+        .toggle-panel-btn {
+            align-self: stretch;
+            width: 18px;
+            padding: 0;
+            border-radius: 0;
+            cursor: pointer;
+            z-index: 1;
+        }
+
+        .actions {
+            flex: 0 0 auto;
+            padding: 8px;
         }
     </style>
 
@@ -67,10 +104,12 @@
             <div class="container1"></div>
             <div class="container3"></div>
             <div class="container2"></div>
-        </div><iframe class="preview"></iframe>
+        </div><button id="toggleInputBtn" class="toggle-panel-btn" type="button">&lt;</button><iframe class="preview"></iframe>
     </div>
-    <button id="cpBtn1">Copy Shared Link</button>
-    <button id="cpBtn2">Copy Embed Link</button>
+    <div class="actions">
+        <button id="cpBtn1">Copy Shared Link</button>
+        <button id="cpBtn2">Copy Embed Link</button>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.11/pako.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs/loader.min.js"></script>
     <script>
@@ -80,6 +119,7 @@
         const _url = new URL(currentUrl);
         const params = _url.searchParams;
         let jsValue = '', cssValue = '', htmlValue = '';
+        let isExpanded = params.get('expanded') !== '0';
         params.forEach((value, name) => {
             if (name === 'js') jsValue = decode(value);
             if (name === 'css') cssValue = decode(value);
@@ -100,6 +140,31 @@
             }
         }
         var iframe = document.querySelector('.preview');
+        var bodyEl = document.querySelector('.body');
+        var toggleInputBtn = document.getElementById('toggleInputBtn');
+        var layoutEditors = () => {
+            if (window.editor1) window.editor1.layout();
+            if (window.editor2) window.editor2.layout();
+            if (window.editor3) window.editor3.layout();
+        };
+        function applyExpandedState() {
+            bodyEl.classList.toggle('input-collapsed', !isExpanded);
+            toggleInputBtn.textContent = isExpanded ? '<' : '>';
+            toggleInputBtn.title = isExpanded ? 'Collapse Input' : 'Expand Input';
+            toggleInputBtn.setAttribute('aria-expanded', String(isExpanded));
+            setTimeout(layoutEditors, 220);
+        }
+        function buildShareUrl() {
+            var htmlB64 = encode(editor1.getValue());
+            var jsB64 = encode(editor2.getValue());
+            var cssB64 = encode(editor3.getValue());
+            return `${url}?js=${jsB64}&css=${cssB64}&html=${htmlB64}${isExpanded ? '' : '&expanded=0'}`;
+        }
+        toggleInputBtn.onclick = () => {
+            isExpanded = !isExpanded;
+            applyExpandedState();
+        };
+        applyExpandedState();
         require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs' } });
         require(['vs/editor/editor.main'], function () {
             var editor1 = monaco.editor.create(document.querySelector('.container1'), { language: 'html', theme: 'vs-dark' });
@@ -130,18 +195,13 @@
             window.editor2 = editor2;
             window.editor3 = editor3;
             window.addEventListener('resize', () => {
-                editor1.layout();
-                editor2.layout();
-                editor3.layout();
+                layoutEditors();
             });
         })
         const cpBtn1 = document.getElementById('cpBtn1');
         const cpBtn2 = document.getElementById('cpBtn2');
         cpBtn1.onclick = () => {
-            var htmlB64 = encode(editor1.getValue());
-            var jsB64 = encode(editor2.getValue());
-            var cssB64 = encode(editor3.getValue());
-            var src = `${url}?js=${jsB64}&css=${cssB64}&html=${htmlB64}`;
+            var src = buildShareUrl();
             navigator.clipboard.writeText(src).then(function () {
                 alert('Copyed ~');
             }, function (err) {
@@ -149,10 +209,7 @@
             });
         }
         cpBtn2.onclick = () => {
-            var htmlB64 = encode(editor1.getValue());
-            var jsB64 = encode(editor2.getValue());
-            var cssB64 = encode(editor3.getValue());
-            var src = `${url}?js=${jsB64}&css=${cssB64}&html=${htmlB64}`;
+            var src = buildShareUrl();
             var iframeStr = `<iframe src="${src}" height="730"
     allow="clipboard-write"
     sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"></iframe>`;
